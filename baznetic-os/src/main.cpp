@@ -1,13 +1,14 @@
 #include <Arduino.h>
 #include <M5Cardputer.h>
+
 #include "wifi_scanner.h"
+#include "system_monitor.h"
 
 // ====================================
 // BAZNETIC OS v0.2
 // M5Stack Cardputer ADV
 // ====================================
 
-// Colours
 #define BG_COLOR       0x0000
 #define HEADER_COLOR   0x07FF
 #define TEXT_COLOR     0xFFFF
@@ -50,17 +51,15 @@ int selectedMenu = 0;
 
 void drawHeader(const char* title) {
 
-    M5Cardputer.Display.fillScreen(BG_COLOR);
+    auto& d = M5Cardputer.Display;
 
-    M5Cardputer.Display.setTextSize(2);
-    M5Cardputer.Display.setTextColor(HEADER_COLOR);
+    d.fillScreen(BG_COLOR);
+    d.setTextSize(2);
+    d.setTextColor(HEADER_COLOR);
+    d.setCursor(8, 5);
+    d.println(title);
 
-    M5Cardputer.Display.setCursor(8, 5);
-    M5Cardputer.Display.println(title);
-
-    M5Cardputer.Display.drawLine(
-        0, 28, 240, 28, HEADER_COLOR
-    );
+    d.drawLine(0, 28, 240, 28, HEADER_COLOR);
 }
 
 // ====================================
@@ -69,28 +68,24 @@ void drawHeader(const char* title) {
 
 void showSplash() {
 
-    M5Cardputer.Display.fillScreen(BG_COLOR);
+    auto& d = M5Cardputer.Display;
 
-    // Main title
-    M5Cardputer.Display.setTextSize(3);
-    M5Cardputer.Display.setTextColor(HEADER_COLOR);
+    d.fillScreen(BG_COLOR);
 
-    M5Cardputer.Display.setCursor(20, 25);
-    M5Cardputer.Display.println("BAZNETIC");
+    d.setTextSize(3);
+    d.setTextColor(HEADER_COLOR);
+    d.setCursor(20, 25);
+    d.println("BAZNETIC");
 
-    // OS title
-    M5Cardputer.Display.setTextSize(2);
-    M5Cardputer.Display.setTextColor(TEXT_COLOR);
+    d.setTextSize(2);
+    d.setTextColor(TEXT_COLOR);
+    d.setCursor(80, 65);
+    d.println("OS");
 
-    M5Cardputer.Display.setCursor(80, 65);
-    M5Cardputer.Display.println("OS");
-
-    // Version
-    M5Cardputer.Display.setTextSize(1);
-    M5Cardputer.Display.setTextColor(GREEN_COLOR);
-
-    M5Cardputer.Display.setCursor(85, 100);
-    M5Cardputer.Display.println("Version 0.2");
+    d.setTextSize(1);
+    d.setTextColor(GREEN_COLOR);
+    d.setCursor(85, 100);
+    d.println("Version 0.2");
 
     delay(1500);
 }
@@ -103,59 +98,54 @@ void drawLauncher() {
 
     drawHeader("BAZNETIC OS");
 
-    // Subtitle
-    M5Cardputer.Display.setTextSize(1);
-    M5Cardputer.Display.setTextColor(GREY_COLOR);
+    auto& d = M5Cardputer.Display;
 
-    M5Cardputer.Display.setCursor(8, 33);
-    M5Cardputer.Display.println("Cardputer ADV");
+    d.setTextSize(1);
+    d.setTextColor(GREY_COLOR);
+    d.setCursor(8, 33);
+    d.println("Cardputer ADV");
 
-    // Menu items
     int y = 49;
 
     for (int i = 0; i < menuCount; i++) {
 
-        M5Cardputer.Display.setTextSize(1);
+        d.setTextSize(1);
 
         if (i == selectedMenu) {
 
-            M5Cardputer.Display.fillRoundRect(
+            d.fillRoundRect(
                 4, y - 3, 232, 19, 4, SELECT_COLOR
             );
 
-            M5Cardputer.Display.setTextColor(GREEN_COLOR);
-
-            M5Cardputer.Display.setCursor(9, y);
-            M5Cardputer.Display.print(">");
+            d.setTextColor(GREEN_COLOR);
+            d.setCursor(9, y);
+            d.print(">");
 
         } else {
-
-            M5Cardputer.Display.setTextColor(TEXT_COLOR);
+            d.setTextColor(TEXT_COLOR);
         }
 
-        M5Cardputer.Display.setCursor(23, y);
-        M5Cardputer.Display.println(menuItems[i]);
+        d.setCursor(23, y);
+        d.println(menuItems[i]);
 
         y += 19;
     }
 
     // Footer
-    M5Cardputer.Display.drawLine(
-        0, 124, 240, 124, HEADER_COLOR
-    );
+    d.drawLine(0, 124, 240, 124, HEADER_COLOR);
 
-    M5Cardputer.Display.setTextSize(1);
-    M5Cardputer.Display.setTextColor(GREY_COLOR);
+    d.setTextSize(1);
+    d.setTextColor(GREY_COLOR);
 
-    M5Cardputer.Display.setCursor(8, 126);
-    M5Cardputer.Display.print("v0.2");
+    d.setCursor(8, 126);
+    d.print("v0.2");
 
-    M5Cardputer.Display.setCursor(105, 126);
-    M5Cardputer.Display.print("ENTER: Select");
+    d.setCursor(105, 126);
+    d.print("ENTER: Select");
 }
 
 // ====================================
-// Application placeholder
+// Placeholder applications
 // ====================================
 
 void drawApplication(AppID app) {
@@ -163,14 +153,6 @@ void drawApplication(AppID app) {
     const char* title = "APPLICATION";
 
     switch (app) {
-
-        case APP_WIFI_SCANNER:
-            title = "WIFI SCANNER";
-            break;
-
-        case APP_SYSTEM_MONITOR:
-            title = "SYSTEM MONITOR";
-            break;
 
         case APP_SIGNAL_METER:
             title = "SIGNAL METER";
@@ -186,17 +168,17 @@ void drawApplication(AppID app) {
 
     drawHeader(title);
 
-    M5Cardputer.Display.setTextSize(2);
-    M5Cardputer.Display.setTextColor(YELLOW_COLOR);
+    auto& d = M5Cardputer.Display;
 
-    M5Cardputer.Display.setCursor(15, 55);
-    M5Cardputer.Display.println("Coming soon!");
+    d.setTextSize(2);
+    d.setTextColor(YELLOW_COLOR);
+    d.setCursor(15, 55);
+    d.println("Coming soon!");
 
-    M5Cardputer.Display.setTextSize(1);
-    M5Cardputer.Display.setTextColor(GREY_COLOR);
-
-    M5Cardputer.Display.setCursor(15, 100);
-    M5Cardputer.Display.println("BACKSPACE: Main Menu");
+    d.setTextSize(1);
+    d.setTextColor(GREY_COLOR);
+    d.setCursor(15, 100);
+    d.println("BACKSPACE: Main Menu");
 }
 
 // ====================================
@@ -214,14 +196,17 @@ void launchApplication() {
 
         case 1:
             currentApp = APP_SYSTEM_MONITOR;
+            systemMonitorStart();
             break;
 
         case 2:
             currentApp = APP_SIGNAL_METER;
+            drawApplication(currentApp);
             break;
 
         case 3:
             currentApp = APP_SETTINGS;
+            drawApplication(currentApp);
             break;
 
         default:
@@ -233,12 +218,33 @@ void launchApplication() {
         "Launching application: %s\n",
         menuItems[selectedMenu]
     );
+}
 
-    // The Wi-Fi Scanner draws its own screen.
-    // Other applications still use placeholders.
-    if (currentApp != APP_WIFI_SCANNER) {
-        drawApplication(currentApp);
+// ====================================
+// Return to launcher
+// ====================================
+
+void returnToLauncher() {
+
+    switch (currentApp) {
+
+        case APP_WIFI_SCANNER:
+            wifiScannerStop();
+            break;
+
+        case APP_SYSTEM_MONITOR:
+            systemMonitorStop();
+            break;
+
+        default:
+            break;
     }
+
+    currentApp = APP_LAUNCHER;
+
+    drawLauncher();
+
+    Serial.println("Returned to Baznetic OS");
 }
 
 // ====================================
@@ -260,7 +266,6 @@ void setup() {
     Serial.println("BAZNETIC OS v0.2");
     Serial.println("====================");
 
-    // Confirm board detection
     if (M5.getBoard() ==
         m5::board_t::board_M5CardputerADV) {
 
@@ -281,11 +286,10 @@ void setup() {
 
 void loop() {
 
-    // Update Cardputer keyboard and hardware
     M5Cardputer.update();
 
     // --------------------------------
-    // Wi-Fi Scanner application
+    // Wi-Fi Scanner
     // --------------------------------
 
     if (currentApp == APP_WIFI_SCANNER) {
@@ -293,14 +297,23 @@ void loop() {
         wifiScannerUpdate();
 
         if (wifiScannerWantsExit()) {
+            returnToLauncher();
+        }
 
-            wifiScannerStop();
+        delay(20);
+        return;
+    }
 
-            currentApp = APP_LAUNCHER;
+    // --------------------------------
+    // System Monitor
+    // --------------------------------
 
-            drawLauncher();
+    if (currentApp == APP_SYSTEM_MONITOR) {
 
-            Serial.println("Returned to Baznetic OS");
+        systemMonitorUpdate();
+
+        if (systemMonitorWantsExit()) {
+            returnToLauncher();
         }
 
         delay(20);
@@ -317,22 +330,18 @@ void loop() {
         Keyboard_Class::KeysState status =
             M5Cardputer.Keyboard.keysState();
 
-        // Return to launcher
+        // Backspace
         if (M5Cardputer.Keyboard.isKeyPressed(KEY_BACKSPACE)) {
 
             if (currentApp != APP_LAUNCHER) {
-
-                currentApp = APP_LAUNCHER;
-                drawLauncher();
-
-                Serial.println("Returned to launcher");
+                returnToLauncher();
             }
         }
 
         // Launcher navigation
         else if (currentApp == APP_LAUNCHER) {
 
-            // Move up
+            // Up
             if (M5Cardputer.Keyboard.isKeyPressed(';')) {
 
                 selectedMenu--;
@@ -344,7 +353,7 @@ void loop() {
                 drawLauncher();
             }
 
-            // Move down
+            // Down
             else if (M5Cardputer.Keyboard.isKeyPressed('.')) {
 
                 selectedMenu++;
@@ -356,9 +365,8 @@ void loop() {
                 drawLauncher();
             }
 
-            // Select application
+            // Select
             else if (status.enter) {
-
                 launchApplication();
             }
         }
