@@ -173,8 +173,7 @@ void wifiScannerStart() {
     networkCount = 0;
 
     WiFi.mode(WIFI_STA);
-    WiFi.disconnect();
-    delay(200);
+    // Keep any connection managed by Settings intact.
 
     scanNetworks();
 }

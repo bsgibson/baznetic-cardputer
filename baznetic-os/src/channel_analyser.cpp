@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <M5Cardputer.h>
 #include <WiFi.h>
+#include <esp_wifi.h>
 #include <math.h>
 
 #include "channel_analyser.h"
@@ -390,6 +391,7 @@ void channelAnalyserUpdate() {
 }
 
 void channelAnalyserStop() {
+    if (scanRunning) esp_wifi_scan_stop();
 
     Serial.println("Stopping Channel Analyser");
 

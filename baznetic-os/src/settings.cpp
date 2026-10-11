@@ -3,6 +3,7 @@
 #include <Preferences.h>
 
 #include "settings.h"
+#include "wifi_manager.h"
 
 namespace {
 
@@ -24,7 +25,7 @@ int selectedItem = 0;
 
 bool exitRequested = false;
 
-const int MENU_COUNT = 2;
+const int MENU_COUNT = 3;
 
 // ------------------------------------
 // Apply brightness
@@ -69,41 +70,47 @@ void drawSettings() {
 
     d.setTextSize(1);
 
+    // Wi-Fi Manager
+    if (selectedItem == 0) d.fillRoundRect(4, 33, 232, 20, 4, SELECT);
+    d.setTextColor(WHITE);
+    d.setCursor(10, 39);
+    d.print("Wi-Fi Manager");
+
     // Brightness
-    if (selectedItem == 0) {
+    if (selectedItem == 1) {
         d.fillRoundRect(
-            4, 39, 232, 30, 4, SELECT
+            4, 56, 232, 30, 4, SELECT
         );
     }
 
     d.setTextColor(WHITE);
-    d.setCursor(10, 45);
+    d.setCursor(10, 62);
     d.print("Brightness");
 
     d.setTextColor(GREEN);
-    d.setCursor(175, 45);
+    d.setCursor(175, 62);
     d.printf("%d%%", brightness);
 
     // Brightness bar
-    d.drawRect(10, 58, 210, 7, GREY);
+    d.drawRect(10, 75, 210, 7, GREY);
 
     int barWidth = 208 * brightness / 100;
 
     d.fillRect(
-        11, 59,
+        11, 76,
         barWidth, 5,
         GREEN
     );
 
     // About
-    if (selectedItem == 1) {
+    if (selectedItem == 2) {
         d.fillRoundRect(
-            4, 76, 232, 22, 4, SELECT
+            4, 89, 232, 20, 4, SELECT
         );
     }
 
     d.setTextColor(WHITE);
-    d.setCursor(10, 82);
+    d.setCursor(10, 95);
     d.print("About Baznetic OS");
 
     d.setTextColor(GREY);
@@ -132,7 +139,7 @@ void drawAbout() {
 
     d.setTextColor(WHITE);
     d.setCursor(8, 36);
-    d.println("Baznetic OS v0.4");
+    d.println("Baznetic OS v0.6");
 
     d.setCursor(8, 50);
     d.println("M5Stack Cardputer ADV");
@@ -163,6 +170,7 @@ void drawAbout() {
 }
 
 bool showingAbout = false;
+bool showingWiFi = false;
 
 } // namespace
 
@@ -193,12 +201,23 @@ void settingsStart() {
 
     exitRequested = false;
     showingAbout = false;
+    showingWiFi = false;
     selectedItem = 0;
 
     drawSettings();
 }
 
 void settingsUpdate() {
+
+    if (showingWiFi) {
+        wifiManagerUpdate();
+        if (wifiManagerWantsExit()) {
+            wifiManagerStop();
+            showingWiFi = false;
+            drawSettings();
+        }
+        return;
+    }
 
     if (!M5Cardputer.Keyboard.isChange() ||
         !M5Cardputer.Keyboard.isPressed()) {
@@ -252,7 +271,7 @@ void settingsUpdate() {
     }
 
     // Brightness adjustment
-    else if (selectedItem == 0 &&
+    else if (selectedItem == 1 &&
              keyboard.isKeyPressed(',')) {
 
         brightness = max(
@@ -265,7 +284,7 @@ void settingsUpdate() {
         drawSettings();
     }
 
-    else if (selectedItem == 0 &&
+    else if (selectedItem == 1 &&
              keyboard.isKeyPressed('/')) {
 
         brightness = min(
@@ -281,7 +300,10 @@ void settingsUpdate() {
     // Enter
     else if (status.enter) {
 
-        if (selectedItem == 1) {
+        if (selectedItem == 0) {
+            showingWiFi = true;
+            wifiManagerStart();
+        } else if (selectedItem == 2) {
             showingAbout = true;
             drawAbout();
         }
@@ -289,6 +311,8 @@ void settingsUpdate() {
 }
 
 void settingsStop() {
+    if (showingWiFi) wifiManagerStop();
+    showingWiFi = false;
     exitRequested = false;
 }
 

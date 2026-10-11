@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <M5Cardputer.h>
 #include <WiFi.h>
+#include <esp_wifi.h>
 #include "signal_meter.h"
 
 // ====================================
@@ -466,8 +467,9 @@ void signalMeterUpdate() {
 
         if (currentScreen == SIGNAL_MONITOR) {
 
-            // Cancel any outstanding async scan.
+            // Stop the radio scan before clearing its results.
             if (scanRunning) {
+                esp_wifi_scan_stop();
                 WiFi.scanDelete();
                 scanRunning = false;
             }
@@ -530,6 +532,7 @@ void signalMeterUpdate() {
 }
 
 void signalMeterStop() {
+    if (scanRunning) esp_wifi_scan_stop();
 
     Serial.println("Stopping Signal Meter");
 

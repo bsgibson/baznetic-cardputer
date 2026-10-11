@@ -6,9 +6,10 @@
 #include "signal_meter.h"
 #include "channel_analyser.h"
 #include "settings.h"
+#include "wifi_manager.h"
 
 // ====================================
-// BAZNETIC OS v0.5
+// BAZNETIC OS v0.6
 // M5Stack Cardputer ADV
 // ====================================
 
@@ -95,7 +96,7 @@ void showSplash() {
     d.setTextSize(1);
     d.setTextColor(GREEN_COLOR);
     d.setCursor(85, 100);
-    d.println("Version 0.5");
+    d.println("Version 0.6");
 
     delay(1500);
 }
@@ -186,7 +187,7 @@ void drawLauncher() {
     d.setTextColor(GREY_COLOR);
 
     d.setCursor(8, 126);
-    d.print("v0.5");
+    d.print("v0.6");
 
     d.setCursor(105, 126);
     d.print("ENTER: Select");
@@ -197,6 +198,16 @@ void drawLauncher() {
 // ====================================
 
 void launchApplication() {
+
+    // ESP32 cannot reliably scan while association is in progress.
+    if ((selectedMenu == 0 || selectedMenu == 2 || selectedMenu == 3) &&
+        wifiManagerIsConnecting()) {
+        M5Cardputer.Display.fillRect(8, 33, 180, 10, BG_COLOR);
+        M5Cardputer.Display.setCursor(8, 33);
+        M5Cardputer.Display.setTextColor(GREEN_COLOR);
+        M5Cardputer.Display.print("Wi-Fi connecting; try again");
+        return;
+    }
 
     switch (selectedMenu) {
 
@@ -291,10 +302,11 @@ void setup() {
 
     // Restore saved brightness
     settingsInit();
+    wifiManagerInit();
 
     Serial.println();
     Serial.println("======================");
-    Serial.println("BAZNETIC OS v0.5");
+    Serial.println("BAZNETIC OS v0.6");
     Serial.println("======================");
 
     showSplash();
@@ -309,6 +321,9 @@ void loop() {
 
     // Update keyboard once per loop
     M5Cardputer.update();
+    wifiManagerTick(currentApp == APP_LAUNCHER ||
+                    currentApp == APP_SYSTEM_MONITOR ||
+                    currentApp == APP_SETTINGS);
 
     // --------------------------------
     // Wi-Fi Scanner
