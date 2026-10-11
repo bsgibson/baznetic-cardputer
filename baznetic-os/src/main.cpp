@@ -3,6 +3,7 @@
 
 #include "wifi_scanner.h"
 #include "system_monitor.h"
+#include "signal_meter.h"
 
 // ====================================
 // BAZNETIC OS v0.2
@@ -201,7 +202,7 @@ void launchApplication() {
 
         case 2:
             currentApp = APP_SIGNAL_METER;
-            drawApplication(currentApp);
+            signalMeterStart();
             break;
 
         case 3:
@@ -234,6 +235,10 @@ void returnToLauncher() {
 
         case APP_SYSTEM_MONITOR:
             systemMonitorStop();
+            break;
+
+        case APP_SIGNAL_METER:
+            signalMeterStop();
             break;
 
         default:
@@ -287,6 +292,22 @@ void setup() {
 void loop() {
 
     M5Cardputer.update();
+
+    // --------------------------------
+// Wi-Fi Signal Meter
+// --------------------------------
+
+if (currentApp == APP_SIGNAL_METER) {
+
+    signalMeterUpdate();
+
+    if (signalMeterWantsExit()) {
+        returnToLauncher();
+    }
+
+    delay(20);
+    return;
+}
 
     // --------------------------------
     // Wi-Fi Scanner
