@@ -1,8 +1,9 @@
 #include <Arduino.h>
 #include <M5Cardputer.h>
+#include "wifi_scanner.h"
 
 // ====================================
-// BAZNETIC OS v0.1
+// BAZNETIC OS v0.2
 // M5Stack Cardputer ADV
 // ====================================
 
@@ -15,7 +16,10 @@
 #define YELLOW_COLOR   0xFFE0
 #define GREY_COLOR     0x8410
 
+// ====================================
 // Application IDs
+// ====================================
+
 enum AppID {
     APP_LAUNCHER,
     APP_WIFI_SCANNER,
@@ -26,7 +30,10 @@ enum AppID {
 
 AppID currentApp = APP_LAUNCHER;
 
+// ====================================
 // Menu configuration
+// ====================================
+
 const char* menuItems[] = {
     "Wi-Fi Scanner",
     "System Monitor",
@@ -83,7 +90,7 @@ void showSplash() {
     M5Cardputer.Display.setTextColor(GREEN_COLOR);
 
     M5Cardputer.Display.setCursor(85, 100);
-    M5Cardputer.Display.println("Version 0.1");
+    M5Cardputer.Display.println("Version 0.2");
 
     delay(1500);
 }
@@ -108,27 +115,24 @@ void drawLauncher() {
 
     for (int i = 0; i < menuCount; i++) {
 
+        M5Cardputer.Display.setTextSize(1);
+
         if (i == selectedMenu) {
 
             M5Cardputer.Display.fillRoundRect(
                 4, y - 3, 232, 19, 4, SELECT_COLOR
             );
 
-            M5Cardputer.Display.setTextColor(
-                GREEN_COLOR
-            );
+            M5Cardputer.Display.setTextColor(GREEN_COLOR);
 
             M5Cardputer.Display.setCursor(9, y);
             M5Cardputer.Display.print(">");
 
         } else {
 
-            M5Cardputer.Display.setTextColor(
-                TEXT_COLOR
-            );
+            M5Cardputer.Display.setTextColor(TEXT_COLOR);
         }
 
-        M5Cardputer.Display.setTextSize(1);
         M5Cardputer.Display.setCursor(23, y);
         M5Cardputer.Display.println(menuItems[i]);
 
@@ -144,7 +148,7 @@ void drawLauncher() {
     M5Cardputer.Display.setTextColor(GREY_COLOR);
 
     M5Cardputer.Display.setCursor(8, 126);
-    M5Cardputer.Display.print("v0.1");
+    M5Cardputer.Display.print("v0.2");
 
     M5Cardputer.Display.setCursor(105, 126);
     M5Cardputer.Display.print("ENTER: Select");
@@ -205,6 +209,7 @@ void launchApplication() {
 
         case 0:
             currentApp = APP_WIFI_SCANNER;
+            wifiScannerStart();
             break;
 
         case 1:
@@ -218,6 +223,10 @@ void launchApplication() {
         case 3:
             currentApp = APP_SETTINGS;
             break;
+
+        default:
+            currentApp = APP_LAUNCHER;
+            return;
     }
 
     Serial.printf(
@@ -225,7 +234,11 @@ void launchApplication() {
         menuItems[selectedMenu]
     );
 
-    drawApplication(currentApp);
+    // The Wi-Fi Scanner draws its own screen.
+    // Other applications still use placeholders.
+    if (currentApp != APP_WIFI_SCANNER) {
+        drawApplication(currentApp);
+    }
 }
 
 // ====================================
@@ -244,7 +257,7 @@ void setup() {
 
     Serial.println();
     Serial.println("====================");
-    Serial.println("BAZNETIC OS v0.1");
+    Serial.println("BAZNETIC OS v0.2");
     Serial.println("====================");
 
     // Confirm board detection
@@ -268,7 +281,35 @@ void setup() {
 
 void loop() {
 
+    // Update Cardputer keyboard and hardware
     M5Cardputer.update();
+
+    // --------------------------------
+    // Wi-Fi Scanner application
+    // --------------------------------
+
+    if (currentApp == APP_WIFI_SCANNER) {
+
+        wifiScannerUpdate();
+
+        if (wifiScannerWantsExit()) {
+
+            wifiScannerStop();
+
+            currentApp = APP_LAUNCHER;
+
+            drawLauncher();
+
+            Serial.println("Returned to Baznetic OS");
+        }
+
+        delay(20);
+        return;
+    }
+
+    // --------------------------------
+    // Launcher and placeholder apps
+    // --------------------------------
 
     if (M5Cardputer.Keyboard.isChange() &&
         M5Cardputer.Keyboard.isPressed()) {
