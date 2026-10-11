@@ -7,6 +7,7 @@
 #include "channel_analyser.h"
 #include "settings.h"
 #include "wifi_manager.h"
+#include "screensaver.h"
 
 // ====================================
 // BAZNETIC OS v0.6
@@ -30,7 +31,8 @@ enum AppID {
     APP_SYSTEM_MONITOR,
     APP_SIGNAL_METER,
     APP_CHANNEL_ANALYSER,
-    APP_SETTINGS
+    APP_SETTINGS,
+    APP_SCREENSAVER
 };
 
 AppID currentApp = APP_LAUNCHER;
@@ -54,6 +56,7 @@ constexpr int VISIBLE_ITEMS = 4;
 
 int selectedMenu = 0;
 int menuScroll = 0;
+unsigned long launcherLastActivity = 0;
 
 // ====================================
 // Header
@@ -189,8 +192,8 @@ void drawLauncher() {
     d.setCursor(8, 126);
     d.print("v0.6");
 
-    d.setCursor(105, 126);
-    d.print("ENTER: Select");
+    d.setCursor(55, 126);
+    d.print("S:Saver   ENTER:Select");
 }
 
 // ====================================
@@ -271,6 +274,10 @@ void returnToLauncher() {
             channelAnalyserStop();
             break;
 
+        case APP_SCREENSAVER:
+            screensaverStop();
+            break;
+
         case APP_SETTINGS:
             settingsStop();
             break;
@@ -280,6 +287,7 @@ void returnToLauncher() {
     }
 
     currentApp = APP_LAUNCHER;
+    launcherLastActivity = millis();
 
     drawLauncher();
 
@@ -302,6 +310,7 @@ void setup() {
 
     // Restore saved brightness
     settingsInit();
+    screensaverInit();
     wifiManagerInit();
 
     Serial.println();
@@ -310,6 +319,7 @@ void setup() {
     Serial.println("======================");
 
     showSplash();
+    launcherLastActivity = millis();
     drawLauncher();
 }
 
@@ -323,7 +333,15 @@ void loop() {
     M5Cardputer.update();
     wifiManagerTick(currentApp == APP_LAUNCHER ||
                     currentApp == APP_SYSTEM_MONITOR ||
-                    currentApp == APP_SETTINGS);
+                    currentApp == APP_SETTINGS ||
+                    currentApp == APP_SCREENSAVER);
+
+    if (currentApp == APP_SCREENSAVER) {
+        screensaverUpdate();
+        if (screensaverWantsExit()) returnToLauncher();
+        delay(20);
+        return;
+    }
 
     // --------------------------------
     // Wi-Fi Scanner
@@ -405,6 +423,15 @@ void loop() {
         return;
     }
 
+    // Auto-start only on the idle launcher; never interrupt an app.
+    if (M5Cardputer.Keyboard.isPressed()) launcherLastActivity = millis();
+    unsigned long idleTimeout = screensaverIdleTimeoutMs();
+    if (idleTimeout > 0 && millis() - launcherLastActivity >= idleTimeout) {
+        currentApp = APP_SCREENSAVER;
+        screensaverStart();
+        return;
+    }
+
     // --------------------------------
     // Launcher keyboard
     // --------------------------------
@@ -416,6 +443,12 @@ void loop() {
 
         Keyboard_Class::KeysState status =
             keyboard.keysState();
+
+        if (keyboard.isKeyPressed('s') || keyboard.isKeyPressed('S')) {
+            currentApp = APP_SCREENSAVER;
+            screensaverStart();
+            return;
+        }
 
         // Up
         if (keyboard.isKeyPressed(';')) {

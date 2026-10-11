@@ -4,6 +4,7 @@
 
 #include "settings.h"
 #include "wifi_manager.h"
+#include "screensaver.h"
 
 namespace {
 
@@ -25,7 +26,7 @@ int selectedItem = 0;
 
 bool exitRequested = false;
 
-const int MENU_COUNT = 3;
+const int MENU_COUNT = 4;
 
 // ------------------------------------
 // Apply brightness
@@ -56,66 +57,100 @@ void saveBrightness() {
 // ------------------------------------
 
 void drawSettings() {
-
     auto& d = M5Cardputer.Display;
-
     d.fillScreen(BG);
-
     d.setTextSize(2);
     d.setTextColor(CYAN);
     d.setCursor(8, 5);
     d.println("SETTINGS");
-
     d.drawLine(0, 28, 240, 28, CYAN);
-
     d.setTextSize(1);
-
-    // Wi-Fi Manager
-    if (selectedItem == 0) d.fillRoundRect(4, 33, 232, 20, 4, SELECT);
-    d.setTextColor(WHITE);
-    d.setCursor(10, 39);
-    d.print("Wi-Fi Manager");
-
-    // Brightness
-    if (selectedItem == 1) {
-        d.fillRoundRect(
-            4, 56, 232, 30, 4, SELECT
-        );
+    const char* items[] = {"Wi-Fi Manager", "Brightness", "Screensaver", "About Baznetic OS"};
+    const int positions[] = {38, 57, 86, 105};
+    for (int i = 0; i < MENU_COUNT; ++i) {
+        int y = positions[i];
+        if (i == selectedItem) d.fillRoundRect(4, y - 3, 232, i == 1 ? 26 : 18, 4, SELECT);
+        d.setTextColor(WHITE);
+        d.setCursor(10, y);
+        d.print(items[i]);
     }
-
-    d.setTextColor(WHITE);
-    d.setCursor(10, 62);
-    d.print("Brightness");
-
     d.setTextColor(GREEN);
-    d.setCursor(175, 62);
+    d.setCursor(175, 57);
     d.printf("%d%%", brightness);
-
-    // Brightness bar
-    d.drawRect(10, 75, 210, 7, GREY);
-
-    int barWidth = 208 * brightness / 100;
-
-    d.fillRect(
-        11, 76,
-        barWidth, 5,
-        GREEN
-    );
-
-    // About
-    if (selectedItem == 2) {
-        d.fillRoundRect(
-            4, 89, 232, 20, 4, SELECT
-        );
-    }
-
-    d.setTextColor(WHITE);
-    d.setCursor(10, 95);
-    d.print("About Baznetic OS");
-
+    d.drawRect(10, 69, 210, 7, GREY);
+    d.fillRect(11, 70, 208 * brightness / 100, 5, GREEN);
     d.setTextColor(GREY);
-    d.setCursor(8, 115);
-    d.print("ENTER: Select  BACK: Exit");
+    d.setCursor(8, 126);
+    d.print("ENTER:Select  BACK:Exit");
+}
+
+int saverSelected = 0;
+bool showingSaverSettings = false;
+bool showingSaverPreview = false;
+String saverMessage;
+
+void drawSaverSettings() {
+    auto& d = M5Cardputer.Display;
+    d.fillScreen(BG);
+    d.setTextSize(2);
+    d.setTextColor(CYAN);
+    d.setCursor(8, 5);
+    d.print("SCREENSAVER");
+    d.drawLine(0, 28, 240, 28, CYAN);
+    d.setTextSize(1);
+    for (int i = 0; i < 3; ++i) {
+        int y = 42 + i * 23;
+        if (i == saverSelected) d.fillRoundRect(4, y - 3, 232, 20, 4, SELECT);
+        d.setTextColor(WHITE);
+        d.setCursor(10, y);
+        if (i == 0) { d.print("Style: "); d.print(screensaverStyleName()); }
+        if (i == 1) { d.print("Idle: "); d.print(screensaverDelayName()); }
+        if (i == 2) d.print("Preview now");
+    }
+    d.setTextColor(GREEN);
+    d.setCursor(8, 104);
+    d.print(saverMessage);
+    d.setTextColor(GREY);
+    d.setCursor(8, 116);
+    d.print(", / or ENTER:Change / Preview");
+    d.setCursor(8, 126);
+    d.print("BACK:Settings  Idle:launcher only");
+}
+
+void updateSaverSettings() {
+    if (showingSaverPreview) {
+        screensaverUpdate();
+        if (screensaverWantsExit()) {
+            screensaverStop();
+            showingSaverPreview = false;
+            drawSaverSettings();
+        }
+        return; // Consume the wake key so it cannot also select a menu item.
+    }
+    auto& keyboard = M5Cardputer.Keyboard;
+    if (!keyboard.isChange() || !keyboard.isPressed()) return;
+    if (keyboard.isKeyPressed(KEY_BACKSPACE)) {
+        showingSaverSettings = false;
+        drawSettings();
+        return;
+    }
+    saverMessage = "";
+    if (keyboard.isKeyPressed(';')) saverSelected = (saverSelected + 2) % 3;
+    else if (keyboard.isKeyPressed('.')) saverSelected = (saverSelected + 1) % 3;
+    else if (keyboard.keysState().enter || keyboard.isKeyPressed(',') || keyboard.isKeyPressed('/')) {
+        if (saverSelected == 2) {
+            if (keyboard.keysState().enter) {
+                showingSaverPreview = true;
+                screensaverStart();
+                return;
+            }
+        } else {
+            int direction = keyboard.isKeyPressed(',') ? -1 : 1;
+            bool saved = saverSelected == 0 ? screensaverChangeStyle(direction) : screensaverChangeDelay(direction);
+            saverMessage = saved ? "Saved" : "Save failed; try again";
+        }
+    }
+    drawSaverSettings();
 }
 
 // ------------------------------------
@@ -202,12 +237,19 @@ void settingsStart() {
     exitRequested = false;
     showingAbout = false;
     showingWiFi = false;
+    showingSaverSettings = false;
+    showingSaverPreview = false;
     selectedItem = 0;
 
     drawSettings();
 }
 
 void settingsUpdate() {
+
+    if (showingSaverSettings) {
+        updateSaverSettings();
+        return;
+    }
 
     if (showingWiFi) {
         wifiManagerUpdate();
@@ -304,6 +346,11 @@ void settingsUpdate() {
             showingWiFi = true;
             wifiManagerStart();
         } else if (selectedItem == 2) {
+            showingSaverSettings = true;
+            saverSelected = 0;
+            saverMessage = "";
+            drawSaverSettings();
+        } else if (selectedItem == 3) {
             showingAbout = true;
             drawAbout();
         }
@@ -311,6 +358,9 @@ void settingsUpdate() {
 }
 
 void settingsStop() {
+    if (showingSaverPreview) screensaverStop();
+    showingSaverPreview = false;
+    showingSaverSettings = false;
     if (showingWiFi) wifiManagerStop();
     showingWiFi = false;
     exitRequested = false;
