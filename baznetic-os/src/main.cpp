@@ -4,6 +4,7 @@
 #include "wifi_scanner.h"
 #include "system_monitor.h"
 #include "signal_meter.h"
+#include "settings.h"
 
 // ====================================
 // BAZNETIC OS v0.2
@@ -98,6 +99,20 @@ void showSplash() {
 void drawLauncher() {
 
     drawHeader("BAZNETIC OS");
+
+    // ------------------------------------
+// Launcher battery indicator
+// ------------------------------------
+
+int battery = M5Cardputer.Power.getBatteryLevel();
+
+M5Cardputer.Display.setTextSize(1);
+M5Cardputer.Display.setTextColor(GREEN_COLOR);
+
+if (battery >= 0 && battery <= 100) {
+    M5Cardputer.Display.setCursor(200, 33);
+    M5Cardputer.Display.printf("%d%%", battery);
+}
 
     auto& d = M5Cardputer.Display;
 
@@ -207,7 +222,7 @@ void launchApplication() {
 
         case 3:
             currentApp = APP_SETTINGS;
-            drawApplication(currentApp);
+            settingsStart();
             break;
 
         default:
@@ -241,6 +256,10 @@ void returnToLauncher() {
             signalMeterStop();
             break;
 
+        case APP_SETTINGS:
+            settingsStop();
+            break;    
+
         default:
             break;
     }
@@ -265,6 +284,7 @@ void setup() {
 
     M5Cardputer.Display.setRotation(1);
     M5Cardputer.Display.setBrightness(90);
+    settingsInit();
 
     Serial.println();
     Serial.println("====================");
@@ -292,6 +312,22 @@ void setup() {
 void loop() {
 
     M5Cardputer.update();
+
+    // --------------------------------
+// Settings
+// --------------------------------
+
+if (currentApp == APP_SETTINGS) {
+
+    settingsUpdate();
+
+    if (settingsWantsExit()) {
+        returnToLauncher();
+    }
+
+    delay(20);
+    return;
+}
 
     // --------------------------------
 // Wi-Fi Signal Meter
