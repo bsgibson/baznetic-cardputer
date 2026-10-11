@@ -4,10 +4,11 @@
 #include "wifi_scanner.h"
 #include "system_monitor.h"
 #include "signal_meter.h"
+#include "channel_analyser.h"
 #include "settings.h"
 
 // ====================================
-// BAZNETIC OS v0.2
+// BAZNETIC OS v0.5
 // M5Stack Cardputer ADV
 // ====================================
 
@@ -16,11 +17,10 @@
 #define TEXT_COLOR     0xFFFF
 #define SELECT_COLOR   0x3186
 #define GREEN_COLOR    0x07E0
-#define YELLOW_COLOR   0xFFE0
 #define GREY_COLOR     0x8410
 
 // ====================================
-// Application IDs
+// Applications
 // ====================================
 
 enum AppID {
@@ -28,27 +28,34 @@ enum AppID {
     APP_WIFI_SCANNER,
     APP_SYSTEM_MONITOR,
     APP_SIGNAL_METER,
+    APP_CHANNEL_ANALYSER,
     APP_SETTINGS
 };
 
 AppID currentApp = APP_LAUNCHER;
 
 // ====================================
-// Menu configuration
+// Launcher menu
 // ====================================
 
 const char* menuItems[] = {
     "Wi-Fi Scanner",
     "System Monitor",
     "Wi-Fi Signal Meter",
+    "Channel Analyser",
     "Settings"
 };
 
-const int menuCount = 4;
+constexpr int menuCount =
+    sizeof(menuItems) / sizeof(menuItems[0]);
+
+constexpr int VISIBLE_ITEMS = 4;
+
 int selectedMenu = 0;
+int menuScroll = 0;
 
 // ====================================
-// Draw header
+// Header
 // ====================================
 
 void drawHeader(const char* title) {
@@ -56,6 +63,7 @@ void drawHeader(const char* title) {
     auto& d = M5Cardputer.Display;
 
     d.fillScreen(BG_COLOR);
+
     d.setTextSize(2);
     d.setTextColor(HEADER_COLOR);
     d.setCursor(8, 5);
@@ -65,7 +73,7 @@ void drawHeader(const char* title) {
 }
 
 // ====================================
-// Boot splash screen
+// Boot splash
 // ====================================
 
 void showSplash() {
@@ -87,50 +95,61 @@ void showSplash() {
     d.setTextSize(1);
     d.setTextColor(GREEN_COLOR);
     d.setCursor(85, 100);
-    d.println("Version 0.2");
+    d.println("Version 0.5");
 
     delay(1500);
 }
 
 // ====================================
-// Draw launcher
+// Scrolling launcher
 // ====================================
 
 void drawLauncher() {
 
-    drawHeader("BAZNETIC OS");
-
-    // ------------------------------------
-// Launcher battery indicator
-// ------------------------------------
-
-int battery = M5Cardputer.Power.getBatteryLevel();
-
-M5Cardputer.Display.setTextSize(1);
-M5Cardputer.Display.setTextColor(GREEN_COLOR);
-
-if (battery >= 0 && battery <= 100) {
-    M5Cardputer.Display.setCursor(200, 33);
-    M5Cardputer.Display.printf("%d%%", battery);
-}
-
     auto& d = M5Cardputer.Display;
 
+    drawHeader("BAZNETIC OS");
+
+    // Battery indicator
+    int battery = M5Cardputer.Power.getBatteryLevel();
+
     d.setTextSize(1);
+    d.setTextColor(GREEN_COLOR);
+
+    if (battery >= 0 && battery <= 100) {
+        d.setCursor(200, 33);
+        d.printf("%d%%", battery);
+    }
+
     d.setTextColor(GREY_COLOR);
     d.setCursor(8, 33);
-    d.println("Cardputer ADV");
+    d.print("Cardputer ADV");
 
-    int y = 49;
+    // Ensure selected application is visible
+    if (selectedMenu < menuScroll) {
+        menuScroll = selectedMenu;
+    }
 
-    for (int i = 0; i < menuCount; i++) {
+    if (selectedMenu >= menuScroll + VISIBLE_ITEMS) {
+        menuScroll = selectedMenu - VISIBLE_ITEMS + 1;
+    }
 
-        d.setTextSize(1);
+    // Draw visible menu items
+    for (int row = 0; row < VISIBLE_ITEMS; row++) {
 
-        if (i == selectedMenu) {
+        int index = menuScroll + row;
+
+        if (index >= menuCount) {
+            break;
+        }
+
+        int y = 49 + row * 19;
+
+        if (index == selectedMenu) {
 
             d.fillRoundRect(
-                4, y - 3, 232, 19, 4, SELECT_COLOR
+                4, y - 3, 232, 19, 4,
+                SELECT_COLOR
             );
 
             d.setTextColor(GREEN_COLOR);
@@ -138,13 +157,26 @@ if (battery >= 0 && battery <= 100) {
             d.print(">");
 
         } else {
+
             d.setTextColor(TEXT_COLOR);
         }
 
+        d.setTextSize(1);
         d.setCursor(23, y);
-        d.println(menuItems[i]);
+        d.print(menuItems[index]);
+    }
 
-        y += 19;
+    // Scroll indicator
+    if (menuScroll > 0) {
+        d.setTextColor(GREEN_COLOR);
+        d.setCursor(230, 32);
+        d.print("^");
+    }
+
+    if (menuScroll + VISIBLE_ITEMS < menuCount) {
+        d.setTextColor(GREEN_COLOR);
+        d.setCursor(230, 116);
+        d.print("v");
     }
 
     // Footer
@@ -154,47 +186,10 @@ if (battery >= 0 && battery <= 100) {
     d.setTextColor(GREY_COLOR);
 
     d.setCursor(8, 126);
-    d.print("v0.2");
+    d.print("v0.5");
 
     d.setCursor(105, 126);
     d.print("ENTER: Select");
-}
-
-// ====================================
-// Placeholder applications
-// ====================================
-
-void drawApplication(AppID app) {
-
-    const char* title = "APPLICATION";
-
-    switch (app) {
-
-        case APP_SIGNAL_METER:
-            title = "SIGNAL METER";
-            break;
-
-        case APP_SETTINGS:
-            title = "SETTINGS";
-            break;
-
-        default:
-            break;
-    }
-
-    drawHeader(title);
-
-    auto& d = M5Cardputer.Display;
-
-    d.setTextSize(2);
-    d.setTextColor(YELLOW_COLOR);
-    d.setCursor(15, 55);
-    d.println("Coming soon!");
-
-    d.setTextSize(1);
-    d.setTextColor(GREY_COLOR);
-    d.setCursor(15, 100);
-    d.println("BACKSPACE: Main Menu");
 }
 
 // ====================================
@@ -221,6 +216,11 @@ void launchApplication() {
             break;
 
         case 3:
+            currentApp = APP_CHANNEL_ANALYSER;
+            channelAnalyserStart();
+            break;
+
+        case 4:
             currentApp = APP_SETTINGS;
             settingsStart();
             break;
@@ -256,9 +256,13 @@ void returnToLauncher() {
             signalMeterStop();
             break;
 
+        case APP_CHANNEL_ANALYSER:
+            channelAnalyserStop();
+            break;
+
         case APP_SETTINGS:
             settingsStop();
-            break;    
+            break;
 
         default:
             break;
@@ -280,26 +284,18 @@ void setup() {
     Serial.begin(115200);
 
     auto cfg = M5.config();
+
     M5Cardputer.begin(cfg, true);
 
     M5Cardputer.Display.setRotation(1);
-    M5Cardputer.Display.setBrightness(90);
+
+    // Restore saved brightness
     settingsInit();
 
     Serial.println();
-    Serial.println("====================");
-    Serial.println("BAZNETIC OS v0.2");
-    Serial.println("====================");
-
-    if (M5.getBoard() ==
-        m5::board_t::board_M5CardputerADV) {
-
-        Serial.println("Cardputer ADV detected");
-
-    } else {
-
-        Serial.println("WARNING: Unexpected board");
-    }
+    Serial.println("======================");
+    Serial.println("BAZNETIC OS v0.5");
+    Serial.println("======================");
 
     showSplash();
     drawLauncher();
@@ -311,39 +307,8 @@ void setup() {
 
 void loop() {
 
+    // Update keyboard once per loop
     M5Cardputer.update();
-
-    // --------------------------------
-// Settings
-// --------------------------------
-
-if (currentApp == APP_SETTINGS) {
-
-    settingsUpdate();
-
-    if (settingsWantsExit()) {
-        returnToLauncher();
-    }
-
-    delay(20);
-    return;
-}
-
-    // --------------------------------
-// Wi-Fi Signal Meter
-// --------------------------------
-
-if (currentApp == APP_SIGNAL_METER) {
-
-    signalMeterUpdate();
-
-    if (signalMeterWantsExit()) {
-        returnToLauncher();
-    }
-
-    delay(20);
-    return;
-}
 
     // --------------------------------
     // Wi-Fi Scanner
@@ -378,54 +343,92 @@ if (currentApp == APP_SIGNAL_METER) {
     }
 
     // --------------------------------
-    // Launcher and placeholder apps
+    // Wi-Fi Signal Meter
+    // --------------------------------
+
+    if (currentApp == APP_SIGNAL_METER) {
+
+        signalMeterUpdate();
+
+        if (signalMeterWantsExit()) {
+            returnToLauncher();
+        }
+
+        delay(20);
+        return;
+    }
+
+    // --------------------------------
+    // Channel Analyser
+    // --------------------------------
+
+    if (currentApp == APP_CHANNEL_ANALYSER) {
+
+        channelAnalyserUpdate();
+
+        if (channelAnalyserWantsExit()) {
+            returnToLauncher();
+        }
+
+        delay(20);
+        return;
+    }
+
+    // --------------------------------
+    // Settings
+    // --------------------------------
+
+    if (currentApp == APP_SETTINGS) {
+
+        settingsUpdate();
+
+        if (settingsWantsExit()) {
+            returnToLauncher();
+        }
+
+        delay(20);
+        return;
+    }
+
+    // --------------------------------
+    // Launcher keyboard
     // --------------------------------
 
     if (M5Cardputer.Keyboard.isChange() &&
         M5Cardputer.Keyboard.isPressed()) {
 
+        auto& keyboard = M5Cardputer.Keyboard;
+
         Keyboard_Class::KeysState status =
-            M5Cardputer.Keyboard.keysState();
+            keyboard.keysState();
 
-        // Backspace
-        if (M5Cardputer.Keyboard.isKeyPressed(KEY_BACKSPACE)) {
+        // Up
+        if (keyboard.isKeyPressed(';')) {
 
-            if (currentApp != APP_LAUNCHER) {
-                returnToLauncher();
+            selectedMenu--;
+
+            if (selectedMenu < 0) {
+                selectedMenu = menuCount - 1;
             }
+
+            drawLauncher();
         }
 
-        // Launcher navigation
-        else if (currentApp == APP_LAUNCHER) {
+        // Down
+        else if (keyboard.isKeyPressed('.')) {
 
-            // Up
-            if (M5Cardputer.Keyboard.isKeyPressed(';')) {
+            selectedMenu++;
 
-                selectedMenu--;
-
-                if (selectedMenu < 0) {
-                    selectedMenu = menuCount - 1;
-                }
-
-                drawLauncher();
+            if (selectedMenu >= menuCount) {
+                selectedMenu = 0;
             }
 
-            // Down
-            else if (M5Cardputer.Keyboard.isKeyPressed('.')) {
+            drawLauncher();
+        }
 
-                selectedMenu++;
-
-                if (selectedMenu >= menuCount) {
-                    selectedMenu = 0;
-                }
-
-                drawLauncher();
-            }
-
-            // Select
-            else if (status.enter) {
-                launchApplication();
-            }
+        // Select
+        else if (status.enter) {
+            launchApplication();
         }
     }
 
