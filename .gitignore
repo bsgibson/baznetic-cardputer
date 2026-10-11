@@ -1,0 +1,9 @@
+# PlatformIO build files
+.pio/
+.pio
+
+# VS Code local settings
+.vscode/
+
+# macOS
+.DS_Store
